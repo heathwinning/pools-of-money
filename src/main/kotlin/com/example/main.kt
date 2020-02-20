@@ -7,6 +7,15 @@ import com.example.chartjs.ChartJsPlugin
 import com.example.chartjs.ChartType
 import com.github.ajalt.colormath.toCssRgb
 import com.ibm.icu.text.RuleBasedNumberFormat
+import io.ktor.application.Application
+import io.ktor.application.install
+import io.ktor.features.Compression
+import io.ktor.features.DefaultHeaders
+import io.ktor.http.cio.websocket.pingPeriod
+import io.ktor.http.cio.websocket.timeout
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.jetty.Jetty
+import io.ktor.websocket.WebSockets
 import io.kweb.*
 import io.kweb.dom.element.creation.ElementCreator
 import io.kweb.dom.element.creation.tags.*
@@ -25,67 +34,80 @@ import kotlin.math.pow
 import koma.*
 import koma.extensions.*
 import koma.matrix.Matrix
+import java.time.Duration
 
 fun main() {
-    Kweb(port = 8080, plugins = listOf(fomanticUIPlugin, ChartJsPlugin("2.8.0")), httpsConfig = SSLConfig(), buildPage = {
-        val config = newConfig()
-        doc.head.new {
-            title().text("Pools of Money | Compound Interest Calculator")
-        }
+    embeddedServer(Jetty, port = 8080, module = Application::kweb).start()
+}
 
-        doc.body.new {
-            div(fomantic.ui.main.container).new {
-                div(fomantic.ui.vertical.segment).new {
-                    h1(fomantic.ui.header).text("Pools of Money")
-                    p().text("This tool is a compound interest calculator with some bells and whistles to model your entire financial life; e.g. living costs after retirement, mortgage/loan repayments, multiple financial assets with different expected returns, etc.")
-                    h2(fomantic.ui.header).text("Terminology")
-                    p().innerHTML("Your finances consist of different assets, each of which we imagine as a separate <i>pool</i> of money,")
-                    div(fomantic.ui.message).new {
-                        p().text("e.g. a bank account, a mortgage, or an investment portfolio.")
-                    }
-                    p().innerHTML("Money flows into and out of these pools in <i>streams</i>,")
-                    div(fomantic.ui.message).new {
-                        p().text("e.g. monthly income flows into a bank account, expenses flow out of a bank account, loan repayments flow into a mortgage account.")
-                    }
+fun Application.kweb() {
+    install(DefaultHeaders)
+    install(Compression)
+    install(WebSockets) {
+        pingPeriod = Duration.ofSeconds(10)
+        timeout = Duration.ofSeconds(30)
+    }
+    install(Kweb) {
+        plugins = listOf(fomanticUIPlugin, ChartJsPlugin("2.8.0"))
+        buildPage = {
+            val config = newConfig()
+            doc.head.new {
+                title().text("Pools of Money | Compound Interest Calculator")
+            }
 
-                    p().innerHTML("A pool may also grow based on the amount of money in it,")
-                    div(fomantic.ui.message).new {
-                        p().text("e.g. a bank account grows at 2% p.a., a mortgage grows at 3.5% p.a., an investment portfolio grows at 6%.")
-                    }
+            doc.body.new {
+                div(fomantic.ui.main.container).new {
+                    div(fomantic.ui.vertical.segment).new {
+                        h1(fomantic.ui.header).text("Pools of Money")
+                        p().text("This tool is a compound interest calculator with some bells and whistles to model your entire financial life; e.g. living costs after retirement, mortgage/loan repayments, multiple financial assets with different expected returns, etc.")
+                        h2(fomantic.ui.header).text("Terminology")
+                        p().innerHTML("Your finances consist of different assets, each of which we imagine as a separate <i>pool</i> of money,")
+                        div(fomantic.ui.message).new {
+                            p().text("e.g. a bank account, a mortgage, or an investment portfolio.")
+                        }
+                        p().innerHTML("Money flows into and out of these pools in <i>streams</i>,")
+                        div(fomantic.ui.message).new {
+                            p().text("e.g. monthly income flows into a bank account, expenses flow out of a bank account, loan repayments flow into a mortgage account.")
+                        }
 
-                    h2(fomantic.ui.header).text("Examples")
-                    div(fomantic.ui.list).new {
-                        div(fomantic.item).new {
-                            p().innerHTML(
-                                """
+                        p().innerHTML("A pool may also grow based on the amount of money in it,")
+                        div(fomantic.ui.message).new {
+                            p().text("e.g. a bank account grows at 2% p.a., a mortgage grows at 3.5% p.a., an investment portfolio grows at 6%.")
+                        }
+
+                        h2(fomantic.ui.header).text("Examples")
+                        div(fomantic.ui.list).new {
+                            div(fomantic.item).new {
+                                p().innerHTML(
+                                    """
                             
                         """.trimIndent()
-                            )
+                                )
+                            }
                         }
                     }
-                }
-                route {
+                    route {
 
-                    path("/") {
-                        //        val clientId = random.nextInt(100_000_000).toString(16)
-                        //        /**
-                        //         * By updating the URL path this will cause the page to switch to the newly created list
-                        //         * automatically, and without a page refresh.
-                        //         */
-                        //        url.path.value = "/$clientId"
-                        //    }
+                        path("/") {
+                            //        val clientId = random.nextInt(100_000_000).toString(16)
+                            //        /**
+                            //         * By updating the URL path this will cause the page to switch to the newly created list
+                            //         * automatically, and without a page refresh.
+                            //         */
+                            //        url.path.value = "/$clientId"
+                            //    }
 
-                        //    path("/{clientId}") {
-                        div(fomantic.ui.form.vertical.segment).new {
-                            config.form(this)
-                        }
-                        div(fomantic.ui.vertical.segment).new {
-                            val calculateButton = button(fomantic.ui.button).text("Calculate")
-                            val messages = div(fomantic.ui.basic.segment)
-                            messages.setAttributeRaw("style", "display: none;")
-                            div(
-                                mapOf(
-                                    "style" to """
+                            //    path("/{clientId}") {
+                            div(fomantic.ui.form.vertical.segment).new {
+                                config.form(this)
+                            }
+                            div(fomantic.ui.vertical.segment).new {
+                                val calculateButton = button(fomantic.ui.button).text("Calculate")
+                                val messages = div(fomantic.ui.basic.segment)
+                                messages.setAttributeRaw("style", "display: none;")
+                                div(
+                                    mapOf(
+                                        "style" to """
                                         opacity: 1;
                                         position: absolute;
                                         background: rgba(0, 0, 0, .7);
@@ -96,50 +118,50 @@ fun main() {
                                         pointer-events: none;
                                         -webkit-transform: translate(-50%, 0);
                                         transform: translate(-50%, 0);""".trimIndent()
-                                )
-                            ).addClasses("chartjs-tooltip")
-                            val chartHolder = div()
-                            calculateButton.on.click {
-                                val (labels, datasets, negativePools) = config.calculate()
-                                messages.removeChildren()
-                                for(pool in negativePools) {
-                                    messages.setAttributeRaw("style", "display: block;")
-                                    messages.new {
-                                        div(fomantic.ui.warning.tiny.message).new {
-                                            div(fomantic.ui.header).text(""""$pool" becomes negative in the selected timeframe""")
-                                            div().text("""
+                                    )
+                                ).addClasses("chartjs-tooltip")
+                                val chartHolder = div()
+                                calculateButton.on.click {
+                                    val (labels, datasets, negativePools) = config.calculate()
+                                    messages.removeChildren()
+                                    for(pool in negativePools) {
+                                        messages.setAttributeRaw("style", "display: block;")
+                                        messages.new {
+                                            div(fomantic.ui.warning.tiny.message).new {
+                                                div(fomantic.ui.header).text(""""$pool" becomes negative in the selected timeframe""")
+                                                div().text("""
                                          Although this is mathematically possible, most banks don't accept negative money.
                                     """.trimIndent())
+                                            }
                                         }
                                     }
-                                }
-                                chartHolder.setAttributeRaw("style", "height: 70vh;")
-                                execute("""
+                                    chartHolder.setAttributeRaw("style", "height: 70vh;")
+                                    execute("""
                                     window.scrollBy({left:0,top:window.innerHeight*0.8,behaviour:"smooth"})
                                 """.trimIndent())
-                                chartHolder.removeChildren().new {
-                                    Chart(
-                                        canvas(2, 1),
-                                        ChartJSConfig(
-                                            type = ChartType.bar,
-                                            data = ChartJSData(
-                                                labels = labels,
-                                                datasets = datasets
-                                            ),
-                                            options = JsonObject(
-                                                mapOf(
-                                                    "maintainAspectRatio" to false,
-                                                    "hover" to mapOf(
-                                                        "mode" to "nearest",
-                                                        "axis" to "x",
-                                                        "intersect" to false
-                                                    ),
-                                                    "tooltips" to mapOf(
-                                                        "mode" to "nearest",
-                                                        "axis" to "x",
-                                                        "intersect" to false,
-                                                        "enabled" to false,
-                                                        "custom" to JSFunction("""
+                                    chartHolder.removeChildren().new {
+                                        Chart(
+                                            canvas(2, 1),
+                                            ChartJSConfig(
+                                                type = ChartType.bar,
+                                                data = ChartJSData(
+                                                    labels = labels,
+                                                    datasets = datasets
+                                                ),
+                                                options = JsonObject(
+                                                    mapOf(
+                                                        "maintainAspectRatio" to false,
+                                                        "hover" to mapOf(
+                                                            "mode" to "nearest",
+                                                            "axis" to "x",
+                                                            "intersect" to false
+                                                        ),
+                                                        "tooltips" to mapOf(
+                                                            "mode" to "nearest",
+                                                            "axis" to "x",
+                                                            "intersect" to false,
+                                                            "enabled" to false,
+                                                            "custom" to JSFunction("""
                                                            function (tooltip) {
         // Tooltip Element
         const tooltipElement = document.getElementsByClassName('chartjs-tooltip')[0];
@@ -253,39 +275,40 @@ fun main() {
         tooltipElement.style.padding = tooltip.yPadding + 'px ' + tooltip.xPadding + 'px';
       }
                                                         """.trimIndent())
-                                                    ),
-                                                    "scales" to mapOf(
-                                                        "xAxes" to listOf(
-                                                            mapOf(
-                                                                "stacked" to true,
-                                                                "barPercentage" to 1,
-                                                                "categoryPercentage" to 1,
-                                                                "scaleLabel" to mapOf(
-                                                                    "display" to true,
-                                                                    "labelString" to "Date"
+                                                        ),
+                                                        "scales" to mapOf(
+                                                            "xAxes" to listOf(
+                                                                mapOf(
+                                                                    "stacked" to true,
+                                                                    "barPercentage" to 1,
+                                                                    "categoryPercentage" to 1,
+                                                                    "scaleLabel" to mapOf(
+                                                                        "display" to true,
+                                                                        "labelString" to "Date"
+                                                                    )
+                                                                )
+                                                            ),
+                                                            "yAxes" to listOf(
+                                                                mapOf(
+                                                                    "stacked" to true,
+                                                                    "ticks" to mapOf(
+                                                                        "callback" to JSFunction("""
+                                                                        function(value, index, values) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: "USD" }).format(value) }
+                                                                    """.trimIndent())
+                                                                    )
                                                                 )
                                                             )
                                                         ),
-                                                        "yAxes" to listOf(
-                                                            mapOf(
-                                                                "stacked" to true,
-                                                                "ticks" to mapOf(
-                                                                    "callback" to JSFunction("""
-                                                                        function(value, index, values) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: "USD" }).format(value) }
-                                                                    """.trimIndent())
-                                                                )
+                                                        "elements" to mapOf(
+                                                            "line" to mapOf(
+                                                                "fill" to -1
                                                             )
-                                                        )
-                                                    ),
-                                                    "elements" to mapOf(
-                                                        "line" to mapOf(
-                                                            "fill" to -1
                                                         )
                                                     )
                                                 )
                                             )
                                         )
-                                    )
+                                    }
                                 }
                             }
                         }
@@ -293,7 +316,7 @@ fun main() {
                 }
             }
         }
-    })
+    }
 }
 
 data class Config(
