@@ -35,11 +35,11 @@ dependencies {
     compile 'com.github.kwebio:kweb-core:0.5.17'
     compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.30'
 
-    implementation 'com.ibm.icu:icu4j:65.1'
+    compile 'com.ibm.icu:icu4j:65.1'
     compile group: "com.kyonifer", name:"koma-core-ejml", version: "0.12"
     compile group: "com.kyonifer", name:"koma-plotting", version: "0.12"
     compile 'com.github.ajalt:colormath:1.4.0'
-    implementation 'com.beust:klaxon:5.0.1'
+    compile 'com.beust:klaxon:5.0.1'
 }
 
 compileKotlin {

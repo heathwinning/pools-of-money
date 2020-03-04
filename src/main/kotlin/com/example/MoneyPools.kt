@@ -37,7 +37,7 @@ import koma.matrix.Matrix
 import java.time.Duration
 
 fun main() {
-    embeddedServer(Jetty, port = 8080, module = Application::kweb).start()
+    embeddedServer(Jetty, port = 80, module = Application::kweb).start()
 }
 
 fun Application.kweb() {
