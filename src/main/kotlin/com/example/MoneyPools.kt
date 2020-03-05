@@ -41,7 +41,7 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 
 fun main() {
-    embeddedServer(Jetty, port = 80, module = Application::kweb).start()
+    embeddedServer(Jetty, port = 443, module = Application::kweb).start()
 }
 
 fun Application.kweb() {
@@ -338,8 +338,6 @@ data class Config(
     val kFrequency: KVar<String>,
     val kPools: KVar<List<PoolConfig>>
 ) {
-    val inputs: MutableList<Pair<ValueElement, KVar<String>>> = mutableListOf()
-
     private fun bindInput(input: ValueElement, prop: KVar<String>) {
         input.value = prop
     }
@@ -473,23 +471,8 @@ data class PoolConfig(
     //val kEndDate: KVar<String>,
     val kStreams: KVar<List<StreamConfig>>
 ) {
-    val inputs: MutableList<Pair<ValueElement, KVar<String>>> = mutableListOf()
     private fun bindInput(input: ValueElement, prop: KVar<String>) {
-        input.on.blur {
-            GlobalScope.launch { handleInput(input, prop) }
-        }
-        inputs.add(Pair(input, prop))
-    }
-
-    suspend fun handleInputs() {
-        inputs.forEach { (input, prop) ->
-            handleInput(input, prop)
-        }
-        kStreams.value.forEach { it.handleInputs() }
-    }
-
-    suspend fun handleInput(input: ValueElement, prop: KVar<String>) {
-        prop.value = input.getValue().await()
+        input.value = prop
     }
     fun addStream() {
         val mutableStreams = kStreams.value.toMutableList()
@@ -609,22 +592,8 @@ data class StreamConfig(
     val kEndAfter: KVar<String>,
     val kRunsForever: KVar<String>
 ) {
-    val inputs: MutableList<Pair<ValueElement, KVar<String>>> = mutableListOf()
     private fun bindInput(input: ValueElement, prop: KVar<String>) {
-        input.on.blur {
-            GlobalScope.launch { handleInput(input, prop) }
-        }
-        inputs.add(Pair(input, prop))
-    }
-
-    suspend fun handleInputs() {
-        inputs.forEach { (input, prop) ->
-            handleInput(input, prop)
-        }
-    }
-
-    suspend fun handleInput(input: ValueElement, prop: KVar<String>) {
-        prop.value = input.getValue().await()
+        input.value = prop
     }
     val grows = kGrowthStrategy.map { strategy ->
         strategy != "none"
@@ -672,23 +641,25 @@ data class StreamConfig(
         )).toList().toTypedArray()
         val direction = kDirection.value.toInt()
         val baseFlow = kBaseFlow.value.toDouble()
-        val growth = kGrowth.value.toDouble()
-        val growthFrequency = kGrowthFrequency.value.toInt()
-        val growthStrategy = when(kGrowthStrategy.value) {
-            "fixed" -> { period: Int -> (baseFlow + (period/growthFrequency) * growth) * direction }
-            "percentage" -> { period: Int -> (baseFlow * (1 + growth * 0.01).pow(period/growthFrequency)) * direction }
-            else -> { period: Int -> baseFlow * direction }
+        val growth = kGrowth.value.let {
+            if(it.isEmpty()) 0.0 else it.toDouble()
         }
-        val flowArray = dates.map { date ->
-            val index = flowDates.indexOf(date)
-            if(index > -1) {
-                growthStrategy(index)
-            } else {
-                0.0
+            val growthFrequency = kGrowthFrequency.value.toInt()
+            val growthStrategy = when(kGrowthStrategy.value) {
+                "fixed" -> { period: Int -> (baseFlow + (period/growthFrequency) * growth) * direction }
+                "percentage" -> { period: Int -> (baseFlow * (1 + growth * 0.01).pow(period/growthFrequency)) * direction }
+                else -> { period: Int -> baseFlow * direction }
             }
+            val flowArray = dates.map { date ->
+                val index = flowDates.indexOf(date)
+                if(index > -1) {
+                    growthStrategy(index)
+                } else {
+                    0.0
+                }
+            }
+            return create(arrayOf(flowArray.toDoubleArray()))
         }
-        return create(arrayOf(flowArray.toDoubleArray()))
-    }
     fun form(elementCreator: ElementCreator<*>) = elementCreator.div().new {
         div(fomantic.three.fields).new {
             div(fomantic.field).new {
@@ -754,7 +725,6 @@ data class StreamConfig(
                                         div(fomantic.ui.label).text(type)
                                     }
                                 }
-
                             }
                         }
                     }
