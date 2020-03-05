@@ -7,7 +7,7 @@ PROJECTID=$(curl -s "http://metadata.google.internal/computeMetadata/v1/project/
 echo "Project ID: ${PROJECTID}"
 
 # Install dependencies from apt
-apt-get install -yq openjdk-11-jdk git
+apt-get install -yq openjdk-8-jdk git
 
 cd /
 if [ -d pools-of-money ] ; then
