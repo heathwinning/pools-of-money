@@ -59,6 +59,9 @@ task gceDeploy {
             commandLine 'git', 'push'
         }
         exec {
+            commandLine 'gcloud', 'compute', 'scp', '--zone=us-central1-a', 'build/libs/moneypools.jar', 'moneypools:~'
+        }
+        exec {
             commandLine 'gcloud', 'compute', 'instances', 'add-metadata', 'moneypools', '--metadata-from-file', 'startup-script=scripts/gce-startup.sh', '--zone=us-central1-a'
         }
         exec {

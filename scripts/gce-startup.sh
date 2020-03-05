@@ -17,8 +17,7 @@ else
   git clone https://github.com/heathwinning/pools-of-money.git
   cd pools-of-money
 fi
-./gradlew jar
-cp build/libs/moneypools.jar /
+cp /home/heath/moneypools.jar /
 cp scripts/moneypools.sh /etc/init.d/moneypools
 chmod a+x /etc/init.d/moneypools
 systemctl daemon-reload
