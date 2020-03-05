@@ -50,18 +50,13 @@ jar {
     }
 }
 
-task gceDeploy {
+task gceDeploy << {
     dependsOn shadowJar
 
-    //exec {
-    //    commandLine 'gcloud', 'compute', 'scp', 'build/libs/moneypools.jar', 'moneypools:~', '--zone=us-central1-a'
-    //}
     exec {
         commandLine 'gcloud', 'compute', 'instances', 'add-metadata', 'moneypools', '--metadata-from-file', 'startup-script=scripts/gce-startup.sh', '--zone=us-central1-a'
     }
-    doLast {
-        exec {
-            commandLine 'gcloud', 'compute', 'ssh', 'moneypools', '--zone=us-central1-a', '--command', 'sudo google_metadata_script_runner --script-type startup --debug'
-        }
+    exec {
+        commandLine 'gcloud', 'compute', 'ssh', 'moneypools', '--zone=us-central1-a', '--command', 'sudo google_metadata_script_runner --script-type startup --debug'
     }
 }
