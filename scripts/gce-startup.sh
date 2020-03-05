@@ -10,17 +10,20 @@ echo "Project ID: ${PROJECTID}"
 apt-get install -yq openjdk-11-jdk git
 
 cd /
-cp /home/heath/moneypools.jar .
 if [ -d pools-of-money ] ; then
-  rm -rf pools-of-money
+  cd pools-of-money
+  git pull
+else
+  git clone https://github.com/heathwinning/pools-of-money.git
 fi
-git clone https://github.com/heathwinning/pools-of-money.git
 cd pools-of-money
+./gradlew shaddowJar
+cp build/libs/moneypools.jar /
 cp scripts/moneypools.sh /etc/init.d/moneypools
+chmod a+x /etc/init.d/moneypools
 systemctl daemon-reload
 
 service moneypools restart
-service moneypools check
 
 # Install logging monitor. The monitor will automatically pickup logs sent to syslog.
 curl -s "https://storage.googleapis.com/signals-agents/logging/google-fluentd-install.sh" | bash
