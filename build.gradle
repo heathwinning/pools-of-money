@@ -54,12 +54,13 @@ jar {
 }
 
 task gceDeploy {
+    dependsOn jar
     doLast {
         exec {
             commandLine 'git', 'push'
         }
         exec {
-            commandLine 'gcloud', 'compute', 'scp', '--zone=us-central1-a', 'build/libs/moneypools.jar', 'moneypools:~'
+            commandLine 'gcloud', 'compute', 'scp', 'build/libs/moneypools.jar', 'moneypools:~', '--zone=us-central1-a'
         }
         exec {
             commandLine 'gcloud', 'compute', 'instances', 'add-metadata', 'moneypools', '--metadata-from-file', 'startup-script=scripts/gce-startup.sh', '--zone=us-central1-a'

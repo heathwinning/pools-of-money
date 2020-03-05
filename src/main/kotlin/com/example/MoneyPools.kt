@@ -11,6 +11,7 @@ import io.ktor.application.Application
 import io.ktor.application.install
 import io.ktor.features.Compression
 import io.ktor.features.DefaultHeaders
+import io.ktor.features.HttpsRedirect
 import io.ktor.http.cio.websocket.pingPeriod
 import io.ktor.http.cio.websocket.timeout
 import io.ktor.server.engine.embeddedServer
@@ -41,7 +42,7 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 
 fun main() {
-    embeddedServer(Jetty, port = 443, module = Application::kweb).start()
+    embeddedServer(Jetty, port = 80, module = Application::kweb).start()
 }
 
 fun Application.kweb() {
