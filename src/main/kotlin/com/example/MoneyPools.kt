@@ -21,12 +21,12 @@ import io.kweb.dom.element.creation.ElementCreator
 import io.kweb.dom.element.creation.tags.*
 import io.kweb.dom.element.new
 import io.kweb.dom.title
-import io.kweb.https.SSLConfig
 import io.kweb.plugins.fomanticUI.fomantic
 import io.kweb.plugins.fomanticUI.fomanticUIPlugin
 import io.kweb.routing.route
 import io.kweb.state.KVar
 import io.kweb.state.render.render
+import jdk.internal.util.xml.impl.Input
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -34,6 +34,11 @@ import kotlin.math.pow
 import koma.*
 import koma.extensions.*
 import koma.matrix.Matrix
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Duration
 
 fun main() {
@@ -122,46 +127,51 @@ fun Application.kweb() {
                                 ).addClasses("chartjs-tooltip")
                                 val chartHolder = div()
                                 calculateButton.on.click {
-                                    val (labels, datasets, negativePools) = config.calculate()
-                                    messages.removeChildren()
-                                    for(pool in negativePools) {
-                                        messages.setAttributeRaw("style", "display: block;")
-                                        messages.new {
-                                            div(fomantic.ui.warning.tiny.message).new {
-                                                div(fomantic.ui.header).text(""""$pool" becomes negative in the selected timeframe""")
-                                                div().text("""
+                                        val (labels, datasets, negativePools) = config.calculate()
+                                        messages.removeChildren()
+                                        for (pool in negativePools) {
+                                            messages.setAttributeRaw("style", "display: block;")
+                                            messages.new {
+                                                div(fomantic.ui.warning.tiny.message).new {
+                                                    div(fomantic.ui.header).text(""""$pool" becomes negative in the selected timeframe""")
+                                                    div().text(
+                                                        """
                                          Although this is mathematically possible, most banks don't accept negative money.
-                                    """.trimIndent())
+                                    """.trimIndent()
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
-                                    chartHolder.setAttributeRaw("style", "height: 70vh;")
-                                    execute("""
+                                        chartHolder.setAttributeRaw("style", "height: 70vh;")
+                                        execute(
+                                            """
                                     window.scrollBy({left:0,top:window.innerHeight*0.8,behaviour:"smooth"})
-                                """.trimIndent())
-                                    chartHolder.removeChildren().new {
-                                        Chart(
-                                            canvas(2, 1),
-                                            ChartJSConfig(
-                                                type = ChartType.bar,
-                                                data = ChartJSData(
-                                                    labels = labels,
-                                                    datasets = datasets
-                                                ),
-                                                options = JsonObject(
-                                                    mapOf(
-                                                        "maintainAspectRatio" to false,
-                                                        "hover" to mapOf(
-                                                            "mode" to "nearest",
-                                                            "axis" to "x",
-                                                            "intersect" to false
-                                                        ),
-                                                        "tooltips" to mapOf(
-                                                            "mode" to "nearest",
-                                                            "axis" to "x",
-                                                            "intersect" to false,
-                                                            "enabled" to false,
-                                                            "custom" to JSFunction("""
+                                """.trimIndent()
+                                        )
+                                        chartHolder.removeChildren().new {
+                                            Chart(
+                                                canvas(2, 1),
+                                                ChartJSConfig(
+                                                    type = ChartType.bar,
+                                                    data = ChartJSData(
+                                                        labels = labels,
+                                                        datasets = datasets
+                                                    ),
+                                                    options = JsonObject(
+                                                        mapOf(
+                                                            "maintainAspectRatio" to false,
+                                                            "hover" to mapOf(
+                                                                "mode" to "nearest",
+                                                                "axis" to "x",
+                                                                "intersect" to false
+                                                            ),
+                                                            "tooltips" to mapOf(
+                                                                "mode" to "nearest",
+                                                                "axis" to "x",
+                                                                "intersect" to false,
+                                                                "enabled" to false,
+                                                                "custom" to JSFunction(
+                                                                    """
                                                            function (tooltip) {
         // Tooltip Element
         const tooltipElement = document.getElementsByClassName('chartjs-tooltip')[0];
@@ -274,42 +284,45 @@ fun Application.kweb() {
         tooltipElement.style.fontStyle = tooltip._fontStyle;
         tooltipElement.style.padding = tooltip.yPadding + 'px ' + tooltip.xPadding + 'px';
       }
-                                                        """.trimIndent())
-                                                        ),
-                                                        "scales" to mapOf(
-                                                            "xAxes" to listOf(
-                                                                mapOf(
-                                                                    "stacked" to true,
-                                                                    "barPercentage" to 1,
-                                                                    "categoryPercentage" to 1,
-                                                                    "scaleLabel" to mapOf(
-                                                                        "display" to true,
-                                                                        "labelString" to "Date"
+                                                        """.trimIndent()
+                                                                )
+                                                            ),
+                                                            "scales" to mapOf(
+                                                                "xAxes" to listOf(
+                                                                    mapOf(
+                                                                        "stacked" to true,
+                                                                        "barPercentage" to 1,
+                                                                        "categoryPercentage" to 1,
+                                                                        "scaleLabel" to mapOf(
+                                                                            "display" to true,
+                                                                            "labelString" to "Date"
+                                                                        )
+                                                                    )
+                                                                ),
+                                                                "yAxes" to listOf(
+                                                                    mapOf(
+                                                                        "stacked" to true,
+                                                                        "ticks" to mapOf(
+                                                                            "callback" to JSFunction(
+                                                                                """
+                                                                        function(value, index, values) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: "USD" }).format(value) }
+                                                                    """.trimIndent()
+                                                                            )
+                                                                        )
                                                                     )
                                                                 )
                                                             ),
-                                                            "yAxes" to listOf(
-                                                                mapOf(
-                                                                    "stacked" to true,
-                                                                    "ticks" to mapOf(
-                                                                        "callback" to JSFunction("""
-                                                                        function(value, index, values) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: "USD" }).format(value) }
-                                                                    """.trimIndent())
-                                                                    )
+                                                            "elements" to mapOf(
+                                                                "line" to mapOf(
+                                                                    "fill" to -1
                                                                 )
-                                                            )
-                                                        ),
-                                                        "elements" to mapOf(
-                                                            "line" to mapOf(
-                                                                "fill" to -1
                                                             )
                                                         )
                                                     )
                                                 )
                                             )
-                                        )
+                                        }
                                     }
-                                }
                             }
                         }
                     }
@@ -326,6 +339,12 @@ data class Config(
     val kFrequency: KVar<String>,
     val kPools: KVar<List<PoolConfig>>
 ) {
+    val inputs: MutableList<Pair<ValueElement, KVar<String>>> = mutableListOf()
+
+    private fun bindInput(input: ValueElement, prop: KVar<String>) {
+        input.value = prop
+    }
+
     fun addPool() {
         val mutablePools = kPools.value.toMutableList()
         mutablePools.add(newPool())
@@ -339,43 +358,46 @@ data class Config(
     }
 
     fun calculate(): Triple<List<String>, List<DataSetJS>, List<String>> {
-        val startDate = LocalDate.parse(kStartDate.value, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-        val endDate = startDate.plusYears(kDuration.value.toLong())
-        val dateRange = (startDate..endDate).toList().toTypedArray()
-        val sampledDates = (startDate..endDate step DateStep.fromString(
-            kFrequency.value
-        )).toList().toTypedArray()
-        val sampledDateIndices = sampledDates.map { date ->
-            dateRange.indexOf(date)
-        }
-        val pools = kPools.value
-        val colours = colourPalette.take(pools.size * 2).toList()
-        val negativeTotalPools = mutableListOf<String>()
-        val report = pools.withIndex().flatMap { (index,pool) ->
-            val name = pool.kName.value
-            val (contributions, interest) = pool.calculate(dateRange)
-            val total = contributions+interest
-            if(min(total) < 0) {
-                negativeTotalPools.add(name)
+            val startDate = LocalDate.parse(kStartDate.value, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            val endDate = startDate.plusYears(kDuration.value.toLong())
+            val dateRange = (startDate..endDate).toList().toTypedArray()
+            val sampledDates = (startDate..endDate step DateStep.fromString(
+                kFrequency.value
+            )).toList().toTypedArray()
+            val sampledDateIndices = sampledDates.map { date ->
+                dateRange.indexOf(date)
             }
-            val sampledContributions = sampledDateIndices.map { dateIndex -> contributions[dateIndex] }
-            val sampledInterest = sampledDateIndices.map { dateIndex -> interest[dateIndex] }
+            val pools = kPools.value
+            val colours = colourPalette.take(pools.size * 2).toList()
+            val negativeTotalPools = mutableListOf<String>()
+            val report = pools.withIndex().flatMap { (index, pool) ->
+                val name = pool.kName.value
+                val (contributions, interest) = pool.calculate(dateRange)
+                val total = contributions + interest
+                if (min(total) < 0) {
+                    negativeTotalPools.add(name)
+                }
+                val sampledContributions = sampledDateIndices.map { dateIndex -> contributions[dateIndex] }
+                val sampledInterest = sampledDateIndices.map { dateIndex -> interest[dateIndex] }
 
-            listOf(
-                DataSetJS(
-                    label = "$name input",
-                    dataList = DataList.Numbers(*sampledContributions.toTypedArray()),
-                    //fill = if (index == 0) "origin" else "-1",
-                    backgroundColor = colours[2 * index].toCssRgb()
-                ), DataSetJS(
-                    label = "$name interest",
-                    dataList = DataList.Numbers(*sampledInterest.toTypedArray()),
-                    //fill = "-1",
-                    backgroundColor = colours[2 * index + 1].toCssRgb()
+                listOf(
+                    DataSetJS(
+                        label = "$name input",
+                        dataList = DataList.Numbers(*sampledContributions.toTypedArray()),
+                        backgroundColor = colours[2 * index].toCssRgb()
+                    ), DataSetJS(
+                        label = "$name interest",
+                        dataList = DataList.Numbers(*sampledInterest.toTypedArray()),
+                        //fill = "-1",
+                        backgroundColor = colours[2 * index + 1].toCssRgb()
+                    )
                 )
+            }
+            return Triple(
+                sampledDates.map { date -> date.format(DateTimeFormatter.ofPattern("MM-yyyy")) },
+                report,
+                negativeTotalPools
             )
-        }
-        return Triple(sampledDates.map { date -> date.format(DateTimeFormatter.ofPattern("MM-yyyy")) }, report, negativeTotalPools)
     }
 
     fun form(elementCreator: ElementCreator<*>) = elementCreator.div(fomantic.ui).new() {
@@ -384,18 +406,18 @@ data class Config(
             div(fomantic.three.fields).new {
                 div(fomantic.field).new {
                     label().text("Start date")
-                    input(type = InputType.date, placeholder = "Start date").value = kStartDate
+                    bindInput(input(type = InputType.date, placeholder = "Start date", kvarUpdateEvent = "change"), kStartDate)
                 }
                 div(fomantic.field).new {
                     label().text("Duration")
                     div(fomantic.ui.right.labeled.input).new {
-                        input(type = InputType.number, placeholder = "Duration").value = kDuration
+                        bindInput(input(type = InputType.number, placeholder = "Duration", kvarUpdateEvent = "change"), kDuration)
                         div(fomantic.ui.label).text("Years")
                     }
                 }
                 div(fomantic.field).new {
                     label().text("Frequency")
-                    select(
+                    bindInput(select(
                         listOf(
                             Pair("1M", "Monthly"),
                             Pair("1Q", "Quarterly"),
@@ -403,9 +425,7 @@ data class Config(
                             Pair("1A", "Annually")
                         ),
                         attributes = fomantic.ui.dropdown.fluid
-                    ).apply {
-                        value = kFrequency
-                    }
+                    ), kFrequency)
                 }
             }
         }
@@ -454,6 +474,24 @@ data class PoolConfig(
     //val kEndDate: KVar<String>,
     val kStreams: KVar<List<StreamConfig>>
 ) {
+    val inputs: MutableList<Pair<ValueElement, KVar<String>>> = mutableListOf()
+    private fun bindInput(input: ValueElement, prop: KVar<String>) {
+        input.on.blur {
+            GlobalScope.launch { handleInput(input, prop) }
+        }
+        inputs.add(Pair(input, prop))
+    }
+
+    suspend fun handleInputs() {
+        inputs.forEach { (input, prop) ->
+            handleInput(input, prop)
+        }
+        kStreams.value.forEach { it.handleInputs() }
+    }
+
+    suspend fun handleInput(input: ValueElement, prop: KVar<String>) {
+        prop.value = input.getValue().await()
+    }
     fun addStream() {
         val mutableStreams = kStreams.value.toMutableList()
         mutableStreams.add(newStream())
@@ -498,25 +536,25 @@ data class PoolConfig(
         div(fomantic.three.fields).new {
             div(fomantic.field).new {
                 label().text("Pool name")
-                input(type = InputType.text, placeholder = "Pool name").value = kName
+                bindInput(input(type = InputType.text, placeholder = "Pool name", kvarUpdateEvent = "change"), kName)
             }
             div(fomantic.field).new {
                 label().text("Initial deposit")
                 div(fomantic.ui.left.labeled.input).new {
                     div(fomantic.ui.label).text("$")
-                    input(type = InputType.number, placeholder = "Initial deposit").value = kStartVolume
+                    bindInput(input(type = InputType.number, placeholder = "Initial deposit", kvarUpdateEvent = "change"), kStartVolume)
                 }
             }
             div(fomantic.field).new {
                 label().text("Interest/growth rate")
                 div(fomantic.ui.right.labeled.input).new {
-                    input(type = InputType.number, placeholder = "Interest/growth rate").value = kGrowthRate
+                    bindInput(input(type = InputType.number, placeholder = "Interest/growth rate", kvarUpdateEvent = "change"), kGrowthRate)
                     div(fomantic.ui.label).text("% per year")
                 }
             }
             div(fomantic.field).new {
                 label().text("Growth frequency")
-                select(
+                bindInput(select(
                     listOf(Pair("1D", "Daily"),
                         Pair("7D", "Weekly"),
                         Pair("14D", "Fortnightly"),
@@ -526,9 +564,7 @@ data class PoolConfig(
                         Pair("1A", "Annually")
                     ),
                     attributes = fomantic.ui.dropdown.fluid
-                ).apply {
-                    value = kCompoundFrequency
-                }
+                ), kCompoundFrequency)
             }
         }
         render(kStreams) { streams ->
@@ -574,6 +610,23 @@ data class StreamConfig(
     val kEndAfter: KVar<String>,
     val kRunsForever: KVar<String>
 ) {
+    val inputs: MutableList<Pair<ValueElement, KVar<String>>> = mutableListOf()
+    private fun bindInput(input: ValueElement, prop: KVar<String>) {
+        input.on.blur {
+            GlobalScope.launch { handleInput(input, prop) }
+        }
+        inputs.add(Pair(input, prop))
+    }
+
+    suspend fun handleInputs() {
+        inputs.forEach { (input, prop) ->
+            handleInput(input, prop)
+        }
+    }
+
+    suspend fun handleInput(input: ValueElement, prop: KVar<String>) {
+        prop.value = input.getValue().await()
+    }
     val grows = kGrowthStrategy.map { strategy ->
         strategy != "none"
     }
@@ -641,20 +694,18 @@ data class StreamConfig(
         div(fomantic.three.fields).new {
             div(fomantic.field).new {
                 label().text("Stream name")
-                input(type = InputType.text, placeholder = "Stream name").value = kName
+                bindInput(input(type = InputType.text, placeholder = "Stream name", kvarUpdateEvent = "change"), kName)
             }
             div(fomantic.field).new {
                 label().text("Flow direction")
-                select(
+                bindInput(select(
                     listOf(Pair("1", "Incoming"), Pair("-1", "Outgoing")),
                     attributes = fomantic.ui.dropdown
-                ).apply {
-                    value = kDirection
-                }
+                ), kDirection)
             }
             div(fomantic.field).new {
                 label().text("Flow frequency")
-                select(
+                bindInput(select(
                     listOf(
                         Pair("1D", "Daily"),
                         Pair("7D", "Weekly"),
@@ -665,9 +716,7 @@ data class StreamConfig(
                         Pair("1A", "Annually")
                     ),
                     attributes = fomantic.ui.dropdown
-                ).apply {
-                    value = kFlowFrequency
-                }
+                ), kFlowFrequency)
             }
         }
         div(fomantic.three.fields).new {
@@ -675,21 +724,19 @@ data class StreamConfig(
                 label().text("Flow amount")
                 div(fomantic.ui.left.labeled.input).new {
                     div(fomantic.ui.label).text("$")
-                    input(type = InputType.number, placeholder = "Flow amount").value = kBaseFlow
+                    bindInput(input(type = InputType.number, placeholder = "Flow amount", kvarUpdateEvent = "change"), kBaseFlow)
                 }
             }
             div(fomantic.field).new {
                 label().text("Flow growth over time")
-                select(
+                bindInput(select(
                     listOf(
                         Pair("none", "None"),
                         Pair("fixed", "Fixed amount"),
                         Pair("percentage", "Percentage")
                     ),
                     attributes = fomantic.ui.dropdown
-                ).apply {
-                    value = kGrowthStrategy
-                }
+                ), kGrowthStrategy)
             }
             div(fomantic.field).new {
                 render(grows) { grows ->
@@ -700,11 +747,11 @@ data class StreamConfig(
                                 if(type == "$") {
                                     div(fomantic.ui.left.labeled.input).new {
                                         div(fomantic.ui.label).text(type)
-                                        input(type = InputType.number, placeholder = "Growth rate").value = kGrowth
+                                        bindInput(input(type = InputType.number, placeholder = "Growth rate", kvarUpdateEvent = "change"), kGrowth)
                                     }
                                 } else {
                                     div(fomantic.ui.right.labeled.input).new {
-                                        input(type = InputType.number, placeholder = "Growth rate").value = kGrowth
+                                        bindInput(input(type = InputType.number, placeholder = "Growth rate", kvarUpdateEvent = "change"), kGrowth)
                                         div(fomantic.ui.label).text(type)
                                     }
                                 }
@@ -718,7 +765,7 @@ data class StreamConfig(
                     div(fomantic.field).new {
                         if (grows) {
                             label().text("Growth frequency")
-                            input(type = InputType.number, placeholder = "Growth frequency").value = kGrowthFrequency
+                            bindInput(input(type = InputType.number, placeholder = "Growth frequency", kvarUpdateEvent = "change"), kGrowthFrequency)
                         }
                     }
                 }
@@ -761,19 +808,17 @@ data class StreamConfig(
         div(fomantic.two.fields).new {
             div(fomantic.field).new {
                 label().text("Start date")
-                input(type = InputType.date, placeholder = "Start date").value = kStartDate
+                bindInput(input(type = InputType.date, placeholder = "Start date", kvarUpdateEvent = "change"), kStartDate)
             }
             div(fomantic.field).new {
                 label().text("Flow forever?")
-                select(
+                bindInput(select(
                     listOf(
                         Pair("indefinite", "Stream runs forever"),
                         Pair("definite", "Stream has an end")
                     ),
                     attributes = fomantic.ui.dropdown
-                ).apply {
-                    value = kRunsForever
-                }
+                ), kRunsForever)
             }
             div(fomantic.field).new {
                 render(kRunsForever) {
@@ -781,7 +826,7 @@ data class StreamConfig(
                         div(fomantic.field).new {
                             label().text("Run for")
                             div(fomantic.ui.right.labeled.input).new {
-                                input(type = InputType.number).value = kEndAfter
+                                bindInput(input(type = InputType.number, kvarUpdateEvent = "change"), kEndAfter)
                                 div(fomantic.ui.label).text(flowFrequencyPlural)
                             }
                         }

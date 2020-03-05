@@ -1,19 +1,17 @@
 buildscript {
-    // Consider moving these values to `gradle.properties`
     ext.kotlin_version = '1.3.61'
-    ext.ktor_version = '1.3.0'
-
     repositories {
         jcenter()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "com.github.jengelman.gradle.plugins:shadow:4.0.4"
     }
 }
 
+apply plugin: 'com.github.johnrengelman.shadow'
 apply plugin: 'java'
 apply plugin: 'kotlin'
-apply plugin: 'war'
 
 sourceSets {
     main.kotlin.srcDirs = [ 'src/main/kotlin' ]
@@ -28,9 +26,6 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-
-    compile "io.ktor:ktor-server-netty:$ktor_version"
-    compile "ch.qos.logback:logback-classic:1.2.3"
 
     compile 'com.github.kwebio:kweb-core:0.5.17'
     compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.30'
@@ -53,10 +48,18 @@ jar {
     manifest {
         attributes 'Main-Class': 'com.example.MoneyPoolsKt'
     }
-    // Add this
-    from {
-        configurations.compile.collect {
-            it.isDirectory() ? it : zipTree(it)
-        }
+}
+
+task gceDeploy {
+    dependsOn shadowJar
+
+    exec {
+        commandLine 'gcloud', 'compute', 'scp', 'build/libs/moneypools.jar', 'moneypools:~', '--zone=us-central1-a'
+    }
+    exec {
+        commandLine 'gcloud', 'compute', 'instances', 'add-metadata', 'moneypools', '--metadata-from-file', 'startup-script=scripts/gce-startup.sh'
+    }
+    exec {
+        commandLine 'gcloud', 'compute', 'ssh', 'moneypools', '--zone=us-central1-a', '--command', 'sudo google_metadata_script_runner --script-type startup --debug'
     }
 }
