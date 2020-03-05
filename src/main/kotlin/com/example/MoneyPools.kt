@@ -26,19 +26,13 @@ import io.kweb.plugins.fomanticUI.fomanticUIPlugin
 import io.kweb.routing.route
 import io.kweb.state.KVar
 import io.kweb.state.render.render
-import jdk.internal.util.xml.impl.Input
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.math.pow
-import koma.*
-import koma.extensions.*
-import koma.matrix.Matrix
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.Duration
 
 fun main() {
