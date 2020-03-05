@@ -15,8 +15,8 @@ if [ -d pools-of-money ] ; then
   git pull
 else
   git clone https://github.com/heathwinning/pools-of-money.git
+  cd pools-of-money
 fi
-cd pools-of-money
 ./gradlew shaddowJar
 cp build/libs/moneypools.jar /
 cp scripts/moneypools.sh /etc/init.d/moneypools
