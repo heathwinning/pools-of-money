@@ -10,7 +10,7 @@
 ### END INIT INFO
 
 dir="/"
-cmd="java -jar /moneypools.jar -Xmx=2g &"
+cmd="java -jar /moneypools.jar -Xmx2g &"
 user=""
 
 name=`basename $0`
