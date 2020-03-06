@@ -1,17 +1,17 @@
 package com.example
 
 import com.beust.klaxon.JsonObject
-import com.example.chartjs.*
-import com.example.chartjs.Chart
-import com.example.chartjs.ChartJsPlugin
-import com.example.chartjs.ChartType
+import com.example.plugins.chartjs.*
+import com.example.plugins.chartjs.Chart
+import com.example.plugins.chartjs.ChartJsPlugin
+import com.example.plugins.chartjs.ChartType
+import com.example.plugins.adsense.AdsensePlugin
 import com.github.ajalt.colormath.toCssRgb
 import com.ibm.icu.text.RuleBasedNumberFormat
 import io.ktor.application.Application
 import io.ktor.application.install
 import io.ktor.features.Compression
 import io.ktor.features.DefaultHeaders
-import io.ktor.features.HttpsRedirect
 import io.ktor.http.cio.websocket.pingPeriod
 import io.ktor.http.cio.websocket.timeout
 import io.ktor.server.engine.embeddedServer
@@ -36,9 +36,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.math.pow
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.future.await
-import kotlinx.coroutines.launch
 import java.time.Duration
 
 fun main() {
@@ -53,7 +50,9 @@ fun Application.kweb() {
         timeout = Duration.ofSeconds(30)
     }
     install(Kweb) {
-        plugins = listOf(fomanticUIPlugin, ChartJsPlugin("2.8.0"))
+        plugins = listOf(fomanticUIPlugin, ChartJsPlugin("2.8.0")
+            , AdsensePlugin("ca-pub-2691768896144534")
+        )
         buildPage = {
             val config = newConfig()
             doc.head.new {
@@ -94,15 +93,6 @@ fun Application.kweb() {
                     route {
 
                         path("/") {
-                            //        val clientId = random.nextInt(100_000_000).toString(16)
-                            //        /**
-                            //         * By updating the URL path this will cause the page to switch to the newly created list
-                            //         * automatically, and without a page refresh.
-                            //         */
-                            //        url.path.value = "/$clientId"
-                            //    }
-
-                            //    path("/{clientId}") {
                             div(fomantic.ui.form.vertical.segment).new {
                                 config.form(this)
                             }
@@ -127,51 +117,51 @@ fun Application.kweb() {
                                 ).addClasses("chartjs-tooltip")
                                 val chartHolder = div()
                                 calculateButton.on.click {
-                                        val (labels, datasets, negativePools) = config.calculate()
-                                        messages.removeChildren()
-                                        for (pool in negativePools) {
-                                            messages.setAttributeRaw("style", "display: block;")
-                                            messages.new {
-                                                div(fomantic.ui.warning.tiny.message).new {
-                                                    div(fomantic.ui.header).text(""""$pool" becomes negative in the selected timeframe""")
-                                                    div().text(
-                                                        """
+                                    val (labels, datasets, negativePools) = config.calculate()
+                                    messages.removeChildren()
+                                    for (pool in negativePools) {
+                                        messages.setAttributeRaw("style", "display: block;")
+                                        messages.new {
+                                            div(fomantic.ui.warning.tiny.message).new {
+                                                div(fomantic.ui.header).text(""""$pool" becomes negative in the selected timeframe""")
+                                                div().text(
+                                                    """
                                          Although this is mathematically possible, most banks don't accept negative money.
                                     """.trimIndent()
-                                                    )
-                                                }
+                                                )
                                             }
                                         }
-                                        chartHolder.setAttributeRaw("style", "height: 70vh;")
-                                        execute(
-                                            """
+                                    }
+                                    chartHolder.setAttributeRaw("style", "height: 70vh;")
+                                    execute(
+                                        """
                                     window.scrollBy({left:0,top:window.innerHeight*0.8,behaviour:"smooth"})
                                 """.trimIndent()
-                                        )
-                                        chartHolder.removeChildren().new {
-                                            Chart(
-                                                canvas(2, 1),
-                                                ChartJSConfig(
-                                                    type = ChartType.bar,
-                                                    data = ChartJSData(
-                                                        labels = labels,
-                                                        datasets = datasets
-                                                    ),
-                                                    options = JsonObject(
-                                                        mapOf(
-                                                            "maintainAspectRatio" to false,
-                                                            "hover" to mapOf(
-                                                                "mode" to "nearest",
-                                                                "axis" to "x",
-                                                                "intersect" to false
-                                                            ),
-                                                            "tooltips" to mapOf(
-                                                                "mode" to "nearest",
-                                                                "axis" to "x",
-                                                                "intersect" to false,
-                                                                "enabled" to false,
-                                                                "custom" to JSFunction(
-                                                                    """
+                                    )
+                                    chartHolder.removeChildren().new {
+                                        Chart(
+                                            canvas(2, 1),
+                                            ChartJSConfig(
+                                                type = ChartType.bar,
+                                                data = ChartJSData(
+                                                    labels = labels,
+                                                    datasets = datasets
+                                                ),
+                                                options = JsonObject(
+                                                    mapOf(
+                                                        "maintainAspectRatio" to false,
+                                                        "hover" to mapOf(
+                                                            "mode" to "nearest",
+                                                            "axis" to "x",
+                                                            "intersect" to false
+                                                        ),
+                                                        "tooltips" to mapOf(
+                                                            "mode" to "nearest",
+                                                            "axis" to "x",
+                                                            "intersect" to false,
+                                                            "enabled" to false,
+                                                            "custom" to JSFunction(
+                                                                """
                                                            function (tooltip) {
         // Tooltip Element
         const tooltipElement = document.getElementsByClassName('chartjs-tooltip')[0];
@@ -285,44 +275,44 @@ fun Application.kweb() {
         tooltipElement.style.padding = tooltip.yPadding + 'px ' + tooltip.xPadding + 'px';
       }
                                                         """.trimIndent()
+                                                            )
+                                                        ),
+                                                        "scales" to mapOf(
+                                                            "xAxes" to listOf(
+                                                                mapOf(
+                                                                    "stacked" to true,
+                                                                    "barPercentage" to 1,
+                                                                    "categoryPercentage" to 1,
+                                                                    "scaleLabel" to mapOf(
+                                                                        "display" to true,
+                                                                        "labelString" to "Date"
+                                                                    )
                                                                 )
                                                             ),
-                                                            "scales" to mapOf(
-                                                                "xAxes" to listOf(
-                                                                    mapOf(
-                                                                        "stacked" to true,
-                                                                        "barPercentage" to 1,
-                                                                        "categoryPercentage" to 1,
-                                                                        "scaleLabel" to mapOf(
-                                                                            "display" to true,
-                                                                            "labelString" to "Date"
-                                                                        )
-                                                                    )
-                                                                ),
-                                                                "yAxes" to listOf(
-                                                                    mapOf(
-                                                                        "stacked" to true,
-                                                                        "ticks" to mapOf(
-                                                                            "callback" to JSFunction(
-                                                                                """
+                                                            "yAxes" to listOf(
+                                                                mapOf(
+                                                                    "stacked" to true,
+                                                                    "ticks" to mapOf(
+                                                                        "callback" to JSFunction(
+                                                                            """
                                                                         function(value, index, values) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: "USD" }).format(value) }
                                                                     """.trimIndent()
-                                                                            )
                                                                         )
                                                                     )
                                                                 )
-                                                            ),
-                                                            "elements" to mapOf(
-                                                                "line" to mapOf(
-                                                                    "fill" to -1
-                                                                )
+                                                            )
+                                                        ),
+                                                        "elements" to mapOf(
+                                                            "line" to mapOf(
+                                                                "fill" to -1
                                                             )
                                                         )
                                                     )
                                                 )
                                             )
-                                        }
+                                        )
                                     }
+                                }
                             }
                         }
                     }
@@ -356,46 +346,46 @@ data class Config(
     }
 
     fun calculate(): Triple<List<String>, List<DataSetJS>, List<String>> {
-            val startDate = LocalDate.parse(kStartDate.value, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-            val endDate = startDate.plusYears(kDuration.value.toLong())
-            val dateRange = (startDate..endDate).toList().toTypedArray()
-            val sampledDates = (startDate..endDate step DateStep.fromString(
-                kFrequency.value
-            )).toList().toTypedArray()
-            val sampledDateIndices = sampledDates.map { date ->
-                dateRange.indexOf(date)
+        val startDate = LocalDate.parse(kStartDate.value, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        val endDate = startDate.plusYears(kDuration.value.toLong())
+        val dateRange = (startDate..endDate).toList().toTypedArray()
+        val sampledDates = (startDate..endDate step DateStep.fromString(
+            kFrequency.value
+        )).toList().toTypedArray()
+        val sampledDateIndices = sampledDates.map { date ->
+            dateRange.indexOf(date)
+        }
+        val pools = kPools.value
+        val colours = colourPalette.take(pools.size * 2).toList()
+        val negativeTotalPools = mutableListOf<String>()
+        val report = pools.withIndex().flatMap { (index, pool) ->
+            val name = pool.kName.value
+            val (contributions, interest) = pool.calculate(dateRange)
+            val total = contributions + interest
+            if (min(total) < 0) {
+                negativeTotalPools.add(name)
             }
-            val pools = kPools.value
-            val colours = colourPalette.take(pools.size * 2).toList()
-            val negativeTotalPools = mutableListOf<String>()
-            val report = pools.withIndex().flatMap { (index, pool) ->
-                val name = pool.kName.value
-                val (contributions, interest) = pool.calculate(dateRange)
-                val total = contributions + interest
-                if (min(total) < 0) {
-                    negativeTotalPools.add(name)
-                }
-                val sampledContributions = sampledDateIndices.map { dateIndex -> contributions[dateIndex] }
-                val sampledInterest = sampledDateIndices.map { dateIndex -> interest[dateIndex] }
+            val sampledContributions = sampledDateIndices.map { dateIndex -> contributions[dateIndex] }
+            val sampledInterest = sampledDateIndices.map { dateIndex -> interest[dateIndex] }
 
-                listOf(
-                    DataSetJS(
-                        label = "$name input",
-                        dataList = DataList.Numbers(*sampledContributions.toTypedArray()),
-                        backgroundColor = colours[2 * index].toCssRgb()
-                    ), DataSetJS(
-                        label = "$name interest",
-                        dataList = DataList.Numbers(*sampledInterest.toTypedArray()),
-                        //fill = "-1",
-                        backgroundColor = colours[2 * index + 1].toCssRgb()
-                    )
+            listOf(
+                DataSetJS(
+                    label = "$name input",
+                    dataList = DataList.Numbers(*sampledContributions.toTypedArray()),
+                    backgroundColor = colours[2 * index].toCssRgb()
+                ), DataSetJS(
+                    label = "$name interest",
+                    dataList = DataList.Numbers(*sampledInterest.toTypedArray()),
+                    //fill = "-1",
+                    backgroundColor = colours[2 * index + 1].toCssRgb()
                 )
-            }
-            return Triple(
-                sampledDates.map { date -> date.format(DateTimeFormatter.ofPattern("MM-yyyy")) },
-                report,
-                negativeTotalPools
             )
+        }
+        return Triple(
+            sampledDates.map { date -> date.format(DateTimeFormatter.ofPattern("MM-yyyy")) },
+            report,
+            negativeTotalPools
+        )
     }
 
     fun form(elementCreator: ElementCreator<*>) = elementCreator.div(fomantic.ui).new() {
@@ -645,22 +635,22 @@ data class StreamConfig(
         val growth = kGrowth.value.let {
             if(it.isEmpty()) 0.0 else it.toDouble()
         }
-            val growthFrequency = kGrowthFrequency.value.toInt()
-            val growthStrategy = when(kGrowthStrategy.value) {
-                "fixed" -> { period: Int -> (baseFlow + (period/growthFrequency) * growth) * direction }
-                "percentage" -> { period: Int -> (baseFlow * (1 + growth * 0.01).pow(period/growthFrequency)) * direction }
-                else -> { period: Int -> baseFlow * direction }
-            }
-            val flowArray = dates.map { date ->
-                val index = flowDates.indexOf(date)
-                if(index > -1) {
-                    growthStrategy(index)
-                } else {
-                    0.0
-                }
-            }
-            return create(arrayOf(flowArray.toDoubleArray()))
+        val growthFrequency = kGrowthFrequency.value.toInt()
+        val growthStrategy = when(kGrowthStrategy.value) {
+            "fixed" -> { period: Int -> (baseFlow + (period/growthFrequency) * growth) * direction }
+            "percentage" -> { period: Int -> (baseFlow * (1 + growth * 0.01).pow(period/growthFrequency)) * direction }
+            else -> { period: Int -> baseFlow * direction }
         }
+        val flowArray = dates.map { date ->
+            val index = flowDates.indexOf(date)
+            if(index > -1) {
+                growthStrategy(index)
+            } else {
+                0.0
+            }
+        }
+        return create(arrayOf(flowArray.toDoubleArray()))
+    }
     fun form(elementCreator: ElementCreator<*>) = elementCreator.div().new {
         div(fomantic.three.fields).new {
             div(fomantic.field).new {

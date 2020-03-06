@@ -1,4 +1,4 @@
-package com.example.chartjs
+package com.example.plugins.chartjs
 
 import io.kweb.plugins.KwebPlugin
 

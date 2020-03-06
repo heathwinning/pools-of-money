@@ -26,6 +26,8 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 
     compile 'com.github.kwebio:kweb-core:0.5.17'
+
+    //compile 'com.google.cloud:google-cloud-logging-logback:0.116.0-alpha'
     compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.30'
 
     compile 'com.ibm.icu:icu4j:65.1'

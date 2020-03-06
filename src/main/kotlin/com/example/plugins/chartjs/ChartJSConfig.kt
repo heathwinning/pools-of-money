@@ -1,4 +1,4 @@
-package com.example.chartjs
+package com.example.plugins.chartjs
 
 import com.beust.klaxon.Converter
 import com.beust.klaxon.JsonObject
@@ -6,7 +6,6 @@ import com.beust.klaxon.JsonValue
 import com.beust.klaxon.Klaxon
 import io.kweb.dom.element.creation.tags.CanvasElement
 import io.kweb.random
-import io.kweb.toJson
 import java.time.Instant
 
 class Chart(canvas: CanvasElement, chartConfig: ChartJSConfig) {
