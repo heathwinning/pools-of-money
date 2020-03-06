@@ -10,7 +10,7 @@
 ### END INIT INFO
 
 dir="/"
-cmd="java -jar /moneypools.jar -Xmx=2g"
+cmd="java -jar /moneypools.jar -Xmx=2g &"
 user=""
 
 name=`basename $0`
@@ -45,7 +45,7 @@ case "$1" in
     stop)
     if is_running; then
         echo -n "Stopping $name.."
-        kill `get_pid`
+        sudo kill `get_pid`
         for i in 1 2 3 4 5 6 7 8 9 10
         # for i in `seq 10`
         do
