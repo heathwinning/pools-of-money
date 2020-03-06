@@ -39,7 +39,7 @@ import kotlin.math.pow
 import java.time.Duration
 
 fun main() {
-    embeddedServer(Jetty, port = 80, module = Application::kweb).start()
+    embeddedServer(Jetty, port = 8080, module = Application::kweb).start()
 }
 
 fun Application.kweb() {
@@ -50,11 +50,12 @@ fun Application.kweb() {
         timeout = Duration.ofSeconds(30)
     }
     install(Kweb) {
-        plugins = listOf(fomanticUIPlugin, ChartJsPlugin("2.8.0")
+        plugins = listOf(
+            fomanticUIPlugin, ChartJsPlugin("2.8.0")
             , AdsensePlugin("ca-pub-2691768896144534")
         )
         buildPage = {
-            val config = newConfig()
+            val config = Config.newConfig()
             doc.head.new {
                 title().text("Pools of Money | Compound Interest Calculator")
             }
@@ -90,19 +91,23 @@ fun Application.kweb() {
                             }
                         }
                     }
-                    route {
-
-                        path("/") {
-                            div(fomantic.ui.form.vertical.segment).new {
-                                config.form(this)
+                    div(fomantic.ui.form.vertical.segment).new {
+                        route {
+                            path("/{config}") { params ->
                             }
-                            div(fomantic.ui.vertical.segment).new {
-                                val calculateButton = button(fomantic.ui.button).text("Calculate")
-                                val messages = div(fomantic.ui.basic.segment)
-                                messages.setAttributeRaw("style", "display: none;")
-                                div(
-                                    mapOf(
-                                        "style" to """
+                            path("/") {
+                            }
+                        }
+                        config.form(this)
+
+                    }
+                    div(fomantic.ui.vertical.segment).new {
+                        val calculateButton = button(fomantic.ui.button).text("Calculate")
+                        val messages = div(fomantic.ui.basic.segment)
+                        messages.setAttributeRaw("style", "display: none;")
+                        div(
+                            mapOf(
+                                "style" to """
                                         opacity: 1;
                                         position: absolute;
                                         background: rgba(0, 0, 0, .7);
@@ -113,55 +118,55 @@ fun Application.kweb() {
                                         pointer-events: none;
                                         -webkit-transform: translate(-50%, 0);
                                         transform: translate(-50%, 0);""".trimIndent()
-                                    )
-                                ).addClasses("chartjs-tooltip")
-                                val chartHolder = div()
-                                calculateButton.on.click {
-                                    val (labels, datasets, negativePools) = config.calculate()
-                                    messages.removeChildren()
-                                    for (pool in negativePools) {
-                                        messages.setAttributeRaw("style", "display: block;")
-                                        messages.new {
-                                            div(fomantic.ui.warning.tiny.message).new {
-                                                div(fomantic.ui.header).text(""""$pool" becomes negative in the selected timeframe""")
-                                                div().text(
-                                                    """
+                            )
+                        ).addClasses("chartjs-tooltip")
+                        val chartHolder = div()
+                        calculateButton.on.click {
+                            val (labels, datasets, negativePools) = config.calculate()
+                            messages.removeChildren()
+                            for (pool in negativePools) {
+                                messages.setAttributeRaw("style", "display: block;")
+                                messages.new {
+                                    div(fomantic.ui.warning.tiny.message).new {
+                                        div(fomantic.ui.header).text(""""$pool" becomes negative in the selected timeframe""")
+                                        div().text(
+                                            """
                                          Although this is mathematically possible, most banks don't accept negative money.
                                     """.trimIndent()
-                                                )
-                                            }
-                                        }
+                                        )
                                     }
-                                    chartHolder.setAttributeRaw("style", "height: 70vh;")
-                                    execute(
-                                        """
+                                }
+                            }
+                            chartHolder.setAttributeRaw("style", "height: 70vh;")
+                            execute(
+                                """
                                     window.scrollBy({left:0,top:window.innerHeight*0.8,behaviour:"smooth"})
                                 """.trimIndent()
-                                    )
-                                    chartHolder.removeChildren().new {
-                                        Chart(
-                                            canvas(2, 1),
-                                            ChartJSConfig(
-                                                type = ChartType.bar,
-                                                data = ChartJSData(
-                                                    labels = labels,
-                                                    datasets = datasets
+                            )
+                            chartHolder.removeChildren().new {
+                                Chart(
+                                    canvas(2, 1),
+                                    ChartJSConfig(
+                                        type = ChartType.bar,
+                                        data = ChartJSData(
+                                            labels = labels,
+                                            datasets = datasets
+                                        ),
+                                        options = JsonObject(
+                                            mapOf(
+                                                "maintainAspectRatio" to false,
+                                                "hover" to mapOf(
+                                                    "mode" to "nearest",
+                                                    "axis" to "x",
+                                                    "intersect" to false
                                                 ),
-                                                options = JsonObject(
-                                                    mapOf(
-                                                        "maintainAspectRatio" to false,
-                                                        "hover" to mapOf(
-                                                            "mode" to "nearest",
-                                                            "axis" to "x",
-                                                            "intersect" to false
-                                                        ),
-                                                        "tooltips" to mapOf(
-                                                            "mode" to "nearest",
-                                                            "axis" to "x",
-                                                            "intersect" to false,
-                                                            "enabled" to false,
-                                                            "custom" to JSFunction(
-                                                                """
+                                                "tooltips" to mapOf(
+                                                    "mode" to "nearest",
+                                                    "axis" to "x",
+                                                    "intersect" to false,
+                                                    "enabled" to false,
+                                                    "custom" to JSFunction(
+                                                        """
                                                            function (tooltip) {
         // Tooltip Element
         const tooltipElement = document.getElementsByClassName('chartjs-tooltip')[0];
@@ -275,44 +280,42 @@ fun Application.kweb() {
         tooltipElement.style.padding = tooltip.yPadding + 'px ' + tooltip.xPadding + 'px';
       }
                                                         """.trimIndent()
-                                                            )
-                                                        ),
-                                                        "scales" to mapOf(
-                                                            "xAxes" to listOf(
-                                                                mapOf(
-                                                                    "stacked" to true,
-                                                                    "barPercentage" to 1,
-                                                                    "categoryPercentage" to 1,
-                                                                    "scaleLabel" to mapOf(
-                                                                        "display" to true,
-                                                                        "labelString" to "Date"
-                                                                    )
-                                                                )
-                                                            ),
-                                                            "yAxes" to listOf(
-                                                                mapOf(
-                                                                    "stacked" to true,
-                                                                    "ticks" to mapOf(
-                                                                        "callback" to JSFunction(
-                                                                            """
-                                                                        function(value, index, values) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: "USD" }).format(value) }
-                                                                    """.trimIndent()
-                                                                        )
-                                                                    )
-                                                                )
-                                                            )
-                                                        ),
-                                                        "elements" to mapOf(
-                                                            "line" to mapOf(
-                                                                "fill" to -1
+                                                    )
+                                                ),
+                                                "scales" to mapOf(
+                                                    "xAxes" to listOf(
+                                                        mapOf(
+                                                            "stacked" to true,
+                                                            "barPercentage" to 1,
+                                                            "categoryPercentage" to 1,
+                                                            "scaleLabel" to mapOf(
+                                                                "display" to true,
+                                                                "labelString" to "Date"
                                                             )
                                                         )
+                                                    ),
+                                                    "yAxes" to listOf(
+                                                        mapOf(
+                                                            "stacked" to true,
+                                                            "ticks" to mapOf(
+                                                                "callback" to JSFunction(
+                                                                    """
+                                                                        function(value, index, values) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: "USD" }).format(value) }
+                                                                    """.trimIndent()
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                                ),
+                                                "elements" to mapOf(
+                                                    "line" to mapOf(
+                                                        "fill" to -1
                                                     )
                                                 )
                                             )
                                         )
-                                    }
-                                }
+                                    )
+                                )
                             }
                         }
                     }
@@ -329,13 +332,28 @@ data class Config(
     val kFrequency: KVar<String>,
     val kPools: KVar<List<PoolConfig>>
 ) {
+    companion object {
+        fun newConfig(): Config {
+            val dateToday = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+            val config = Config(
+                KVar(dateToday),
+                KVar(""),
+                KVar("10"),
+                KVar("1A"),
+                KVar(listOf())
+            )
+            config.addPool()
+            return config
+        }
+    }
+
     private fun bindInput(input: ValueElement, prop: KVar<String>) {
         input.value = prop
     }
 
     fun addPool() {
         val mutablePools = kPools.value.toMutableList()
-        mutablePools.add(newPool())
+        mutablePools.add(PoolConfig.newPool())
         kPools.value = mutablePools
     }
 
@@ -441,33 +459,30 @@ data class Config(
         }
     }
 }
-fun newConfig(): Config {
-    val dateToday = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-    val config = Config(
-        KVar(dateToday),
-        KVar(""),
-        KVar("10"),
-        KVar("1A"),
-        KVar(listOf())
-    )
-    config.addPool()
-    return config
-}
 data class PoolConfig(
     val kName: KVar<String>,
     val kGrowthRate: KVar<String>,
     val kCompoundFrequency: KVar<String>,
     val kStartVolume: KVar<String>,
-    //val startDate: KVar<String>,
-    //val kEndDate: KVar<String>,
     val kStreams: KVar<List<StreamConfig>>
 ) {
+    companion object {
+        fun newPool(): PoolConfig {
+            return PoolConfig(
+                KVar(""),
+                KVar(""),
+                KVar("1D"),
+                KVar(""),
+                KVar(listOf())
+            )
+        }
+    }
     private fun bindInput(input: ValueElement, prop: KVar<String>) {
         input.value = prop
     }
     fun addStream() {
         val mutableStreams = kStreams.value.toMutableList()
-        mutableStreams.add(newStream())
+        mutableStreams.add(StreamConfig.newStream())
         kStreams.value = mutableStreams
     }
 
@@ -562,15 +577,6 @@ data class PoolConfig(
         }
     }
 }
-fun newPool(): PoolConfig {
-    return PoolConfig(
-        KVar(""),
-        KVar(""),
-        KVar("1D"),
-        KVar(""),
-        KVar(listOf())
-    )
-}
 data class StreamConfig(
     val kName: KVar<String>,
     val kDirection: KVar<String>,
@@ -583,6 +589,23 @@ data class StreamConfig(
     val kEndAfter: KVar<String>,
     val kRunsForever: KVar<String>
 ) {
+    companion object {
+        fun newStream(): StreamConfig {
+            return StreamConfig(
+                KVar(""),
+                KVar("1"),
+                KVar("1M"),
+                KVar(""),
+                KVar("none"),
+                KVar(""),
+                KVar("1"),
+                KVar(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))),
+                KVar(""),
+                KVar("indefinite")
+            )
+        }
+    }
+
     private fun bindInput(input: ValueElement, prop: KVar<String>) {
         input.value = prop
     }
@@ -795,18 +818,4 @@ data class StreamConfig(
             }
         }
     }
-}
-fun newStream(): StreamConfig {
-    return StreamConfig(
-        KVar(""),
-        KVar("1"),
-        KVar("1M"),
-        KVar(""),
-        KVar("none"),
-        KVar(""),
-        KVar("1"),
-        KVar(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))),
-        KVar(""),
-        KVar("indefinite")
-    )
 }
