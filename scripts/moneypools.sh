@@ -10,7 +10,7 @@
 ### END INIT INFO
 
 dir="/"
-cmd="java -jar /moneypools.jar -Xmx2048m &"
+cmd="bash -c 'java -jar /moneypools.jar -Xmx2048m -Xms512m &'"
 user=""
 
 name=`basename $0`
@@ -37,6 +37,7 @@ case "$1" in
             sudo -u "$user" $cmd
         fi
         echo $! > "$pid_file"
+        echo "pid is" ${cat $pid_file}
         if ! is_running; then
             exit 1
         fi
