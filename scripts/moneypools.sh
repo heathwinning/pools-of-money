@@ -10,7 +10,7 @@
 ### END INIT INFO
 
 dir="/"
-cmd="java -jar /moneypools.jar -Xmx2048m -Xms512m &"
+cmd="java -jar /moneypools.jar -Xmx2048m -Xms512m"
 user=""
 
 name=`basename $0`
@@ -32,9 +32,9 @@ case "$1" in
         echo "Starting $name"
         cd "$dir"
         if [ -z "$user" ]; then
-            sudo $cmd
+            sudo -b $cmd
         else
-            sudo -u "$user" $cmd
+            sudo -b -u "$user" $cmd
         fi
         echo $! > "$pid_file"
         echo "pid is" ${cat $pid_file}
