@@ -1,12 +1,9 @@
-package com.example
+package com.github.heathwinning
 
 import com.beust.klaxon.JsonObject
-import com.example.plugins.chartjs.*
-import com.example.plugins.chartjs.Chart
-import com.example.plugins.chartjs.ChartJsPlugin
-import com.example.plugins.chartjs.ChartType
-import com.example.plugins.adsense.AdsensePlugin
+import com.github.heathwinning.plugins.googleAdsense.GoogleAdsensePlugin
 import com.github.ajalt.colormath.toCssRgb
+import com.github.heathwinning.plugins.chartjs.*
 import com.ibm.icu.text.RuleBasedNumberFormat
 import io.ktor.application.Application
 import io.ktor.application.install
@@ -52,7 +49,7 @@ fun Application.kweb() {
     install(Kweb) {
         plugins = listOf(
             fomanticUIPlugin, ChartJsPlugin("2.8.0")
-            , AdsensePlugin("ca-pub-2691768896144534")
+            , GoogleAdsensePlugin("ca-pub-2691768896144534")
         )
         buildPage = {
             val config = Config.newConfig()
@@ -77,7 +74,7 @@ fun Application.kweb() {
 
                         p().innerHTML("A pool may also grow based on the amount of money in it,")
                         div(fomantic.ui.message).new {
-                            p().text("e.g. a bank account grows at 2% p.a., a mortgage grows at 3.5% p.a., an investment portfolio grows at 6%.")
+                            p().text("e.g. a bank account grows at 2% p.a., the principal part of a mortgage grows at 3.5% p.a. (this pool has negative volume), an investment portfolio grows at 6%.")
                         }
 
                         h2(fomantic.ui.header).text("Examples")
@@ -374,7 +371,7 @@ data class Config(
             dateRange.indexOf(date)
         }
         val pools = kPools.value
-        val colours = colourPalette.take(pools.size * 2).toList()
+        val colours = colourPalette().take(pools.size * 2).toList()
         val negativeTotalPools = mutableListOf<String>()
         val report = pools.withIndex().flatMap { (index, pool) ->
             val name = pool.kName.value

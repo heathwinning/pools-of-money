@@ -1,10 +1,8 @@
-package com.example
+package com.github.heathwinning
 
 import com.github.ajalt.colormath.HSV
 
-val values = listOf(70, 90)
-val saturations = listOf(60)
-val colourPalette = sequence {
+fun colourPalette(saturations: List<Int> = listOf(60), values: List<Int> = listOf(90)) = sequence {
     for (s in saturations) {
         for (v in values) {
             yield(HSV(0,s,v,0.6F))

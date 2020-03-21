@@ -46,7 +46,7 @@ compileTestKotlin {
 
 jar {
     manifest {
-        attributes 'Main-Class': 'com.example.MoneyPoolsKt'
+        attributes 'Main-Class': 'com.github.heathwinning.AppKt'
     }
     from {
         configurations.compile.collect {
@@ -55,24 +55,29 @@ jar {
     }
 }
 
-task gceUpload {
+task dockerBuild {
     dependsOn jar
     doLast {
         exec {
-            commandLine 'gcloud', 'compute', 'scp', 'build/libs/moneypools.jar', 'moneypools:~', '--zone=us-central1-a'
+            commandLine 'docker', 'build', '-t', 'moneypools', '.'
         }
     }
 }
-task gceDeploy {
+
+task dockerRun {
+    dependsOn dockerBuild
     doLast {
         exec {
-            commandLine 'git', 'push'
+            commandLine 'docker', 'run', '-m512M', '--cpus', '2', '-p', '8080:8080', '--rm', 'moneypools'
         }
+    }
+}
+
+task gaeDeploy {
+    dependsOn dockerBuild
+    doLast {
         exec {
-            commandLine 'gcloud', 'compute', 'instances', 'add-metadata', 'moneypools', '--metadata-from-file', 'startup-script=scripts/gce-startup.sh', '--zone=us-central1-a'
-        }
-        exec {
-            commandLine 'gcloud', 'compute', 'ssh', 'moneypools', '--zone=us-central1-a', '--command', 'sudo google_metadata_script_runner --script-type startup --debug'
+            commandLine 'gcloud', 'app', 'deploy'
         }
     }
 }
