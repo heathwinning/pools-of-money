@@ -1,4 +1,4 @@
-package com.example.plugins.chartjs
+package com.github.heathwinning.plugins.chartjs
 
 import com.beust.klaxon.Converter
 import com.beust.klaxon.JsonObject
@@ -15,7 +15,8 @@ class Chart(canvas: CanvasElement, chartConfig: ChartJSConfig) {
         canvas.creator?.require(ChartJsPlugin::class)
         canvas.execute("""
             var $chartVarName = new Chart(${canvas.jsExpression}.getContext('2d'), ${Klaxon().converter(
-            JSFunctionConverter).toJsonString(chartConfig)})
+            JSFunctionConverter
+        ).toJsonString(chartConfig)})
         """.trimIndent())
     }
 }

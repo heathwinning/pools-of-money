@@ -1,4 +1,4 @@
-package com.example
+package com.github.heathwinning
 
 import java.time.DayOfWeek
 import java.time.LocalDate
