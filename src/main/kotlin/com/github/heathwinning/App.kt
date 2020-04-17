@@ -8,6 +8,7 @@ import io.kweb.dom.element.Element
 import io.kweb.dom.element.creation.ElementCreator
 import io.kweb.dom.element.creation.tags.*
 import io.kweb.dom.element.new
+import io.kweb.dom.title
 import io.kweb.plugins.fomanticUI.fomantic
 import io.kweb.plugins.fomanticUI.fomanticUIPlugin
 import io.kweb.state.KVar
@@ -23,13 +24,48 @@ fun main() {
             GoogleAnalyticsPlugin("UA-161523896-1")
         )
     ) {
+        doc.head.new {
+            title().text("Pools of Money | Compound Interest Calculator")
+        }
+
         doc.body.new {
-            val reportingForm = ReportingForm()
-            val poolForms = KVar(listOf<PoolForm>(PoolForm()))
-            val externalSourcePool = Pool("source")
-            val externalSinkPool = Pool("sink")
-            val streamForms = KVar(listOf<StreamForm>())
             div(fomantic.ui.main.container).new {
+                div(fomantic.ui.vertical.segment).new {
+                    h1(fomantic.ui.header).text("Pools of Money")
+                    p().text("This tool is a compound interest calculator with some bells and whistles to model your entire financial life; e.g. living costs after retirement, mortgage/loan repayments, multiple financial assets with different expected returns, etc.")
+                    h2(fomantic.ui.header).text("Terminology")
+                    p().innerHTML("Your finances consist of different assets, each of which we imagine as a separate <i>pool</i> of money,")
+                    div(fomantic.ui.message).new {
+                        p().text("e.g. a bank account, a mortgage, or an investment portfolio.")
+                    }
+                    p().innerHTML("Money flows into and out of these pools in <i>streams</i>,")
+                    div(fomantic.ui.message).new {
+                        p().text("e.g. monthly income flows into a bank account, expenses flow out of a bank account, loan repayments flow into a mortgage account.")
+                    }
+
+                    p().innerHTML("A pool may also grow based on the amount of money in it,")
+                    div(fomantic.ui.message).new {
+                        p().text("e.g. a bank account grows at 2% p.a., the principal part of a mortgage grows at 3.5% p.a. (this pool has negative volume), an investment portfolio grows at 6%.")
+                    }
+
+                    /*
+                h2(fomantic.ui.header).text("Examples")
+                div(fomantic.ui.list).new {
+                    div(fomantic.item).new {
+                        p().innerHTML(
+                            """
+                            
+                        """.trimIndent()
+                        )
+                    }
+                }
+                 */
+                }
+                val reportingForm = ReportingForm()
+                val poolForms = KVar(listOf<PoolForm>(PoolForm()))
+                val externalSourcePool = Pool("source")
+                val externalSinkPool = Pool("sink")
+                val streamForms = KVar(listOf<StreamForm>())
                 div(fomantic.ui.form.vertical.segment).new {
                     reportingForm.form(this)
                     h2().text("Pools")
@@ -89,7 +125,7 @@ fun main() {
                     val calculateButton = button(fomantic.ui.button).text("Calculate")
 
                     val networkChartHolder = div(fomantic.ui.grid)
-                    val streamChartHolder = div(fomantic.ui.grid)
+                    val streamChartHolder = div()
 
                     calculateButton.on.click {
                         val reportingStartDate = LocalDate.parse(
@@ -127,27 +163,6 @@ fun main() {
                                 backgroundColor = poolColours[index].toCssRgb()
                             )
                         }
-                        val pool = network.pools[0]
-                        val streamsIn = network.streamsIn(pool)
-                        val streamInColours = colourPalette().take(streamsIn.size).toList()
-                        val streamInDatasets = streamsIn.mapIndexed { index, stream ->
-                            DataSetJS(
-                                label = stream.name,
-                                dataList = DataList.Numbers(*reportingIndices.map { i -> stream.targetHistory[i] } //downsample
-                                    .toTypedArray()),
-                                backgroundColor = streamInColours[index].toCssRgb()
-                            )
-                        }
-                        val streamsOut = network.streamsOut(pool)
-                        val streamsOutColours = colourPalette().take(streamsOut.size).toList()
-                        val streamsOutDatasets = streamsOut.mapIndexed { index, stream ->
-                            DataSetJS(
-                                label = stream.name,
-                                dataList = DataList.Numbers(*reportingIndices.map { i -> stream.sourceHistory[i] } //downsample
-                                    .toTypedArray()),
-                                backgroundColor = streamsOutColours[index].toCssRgb()
-                            )
-                        }
                         networkChartHolder.removeChildren()
                         networkChartHolder.new {
                             div(fomantic.sixteen.wide.column).setAttributeRaw("style", "height: 70vh;").new {
@@ -172,45 +187,128 @@ fun main() {
                             }
                             streamChartHolder.removeChildren()
                             streamChartHolder.new {
-                                div(fomantic.eight.wide.column).setAttributeRaw("style", "height: 70vh;").new {
-                                    chartJSTooltip("streams-in-tooltip")
-                                    Chart(
-                                        canvas(2, 1),
-                                        ChartJSConfig(
-                                            type = ChartType.bar,
-                                            data = ChartJSData(
-                                                labels = reportingDates.map { date ->
-                                                    date.format(
-                                                        DateTimeFormatter.ofPattern(
-                                                            "MM-yyyy"
+                                val tabHeader = div(fomantic.ui.top.attached.tabular.menu)
+                                val tabBodies = network.pools.mapIndexed { index, pool ->
+                                    val streamsIn = network.streamsIn(pool)
+                                    val streamInColours = colourPalette().take(streamsIn.size).toList()
+                                    val streamInDatasets = streamsIn.mapIndexed { index, stream ->
+                                        DataSetJS(
+                                            label = stream.name,
+                                            dataList = DataList.Numbers(*reportingIndices.map { i -> stream.targetHistory[i] } //downsample
+                                                .toTypedArray()),
+                                            backgroundColor = streamInColours[index].toCssRgb()
+                                        )
+                                    }
+                                    val streamsOut = network.streamsOut(pool)
+                                    val streamsOutColours = colourPalette().take(streamsOut.size).toList()
+                                    val streamsOutDatasets = streamsOut.mapIndexed { index, stream ->
+                                        DataSetJS(
+                                            label = stream.name,
+                                            dataList = DataList.Numbers(*reportingIndices.map { i -> stream.sourceHistory[i] } //downsample
+                                                .toTypedArray()),
+                                            backgroundColor = streamsOutColours[index].toCssRgb()
+                                        )
+                                    }
+                                    val tabBody = if (index == 0) {
+                                        div(fomantic.ui.bottom.attached.active.tab.segment).setAttributeRaw(
+                                            "data-tab",
+                                            "$index"
+                                        )
+                                    } else {
+                                        div(fomantic.ui.bottom.attached.tab.segment).setAttributeRaw(
+                                            "data-tab",
+                                            "$index"
+                                        )
+                                    }
+                                    tabBody.new {
+                                        div(fomantic.ui.grid).new {
+                                            div(fomantic.eight.wide.column).setAttributeRaw(
+                                                "style",
+                                                "height: 40vh;"
+                                            )
+                                                .new {
+                                                    chartJSTooltip("streams-in-tooltip-${pool.name}")
+                                                    Chart(
+                                                        canvas(2, 1),
+                                                        ChartJSConfig(
+                                                            type = ChartType.bar,
+                                                            data = ChartJSData(
+                                                                labels = reportingDates.map { date ->
+                                                                    date.format(
+                                                                        DateTimeFormatter.ofPattern(
+                                                                            "MM-yyyy"
+                                                                        )
+                                                                    )
+                                                                },
+                                                                datasets = streamInDatasets
+                                                            ),
+                                                            options = myChartJSOptions("streams-in-tooltip-${pool.name}")
                                                         )
                                                     )
-                                                },
-                                                datasets = streamInDatasets
-                                            ),
-                                            options = myChartJSOptions("streams-in-tooltip")
-                                        )
-                                    )
+                                                }
+                                            div(fomantic.eight.wide.column).setAttributeRaw(
+                                                "style",
+                                                "height: 40vh;"
+                                            )
+                                                .new {
+                                                    chartJSTooltip("streams-out-tooltip-${pool.name}")
+                                                    Chart(
+                                                        canvas(2, 1),
+                                                        ChartJSConfig(
+                                                            type = ChartType.bar,
+                                                            data = ChartJSData(
+                                                                labels = reportingDates.map { date ->
+                                                                    date.format(
+                                                                        DateTimeFormatter.ofPattern(
+                                                                            "MM-yyyy"
+                                                                        )
+                                                                    )
+                                                                },
+                                                                datasets = streamsOutDatasets
+                                                            ),
+                                                            options = myChartJSOptions(
+                                                                "streams-out-tooltip-${pool.name}",
+                                                                reverseY = true
+                                                            )
+                                                        )
+                                                    )
+                                                }
+                                        }
+                                        tabBody
+                                    }
                                 }
-                                div(fomantic.eight.wide.column).setAttributeRaw("style", "height: 70vh;").new {
-                                    chartJSTooltip("streams-out-tooltip")
-                                    Chart(
-                                        canvas(2, 1),
-                                        ChartJSConfig(
-                                            type = ChartType.bar,
-                                            data = ChartJSData(
-                                                labels = reportingDates.map { date ->
-                                                    date.format(
-                                                        DateTimeFormatter.ofPattern(
-                                                            "MM-yyyy"
-                                                        )
-                                                    )
-                                                },
-                                                datasets = streamsOutDatasets
-                                            ),
-                                            options = myChartJSOptions("streams-out-tooltip", reverseY = true)
-                                        )
-                                    )
+                                val tabHeaders = network.pools.mapIndexed { index, pool ->
+                                    tabHeader.new {
+                                        if (index == 0) {
+                                            div(fomantic.ui.active.item).setAttributeRaw("data-tab", "$index")
+                                        } else {
+                                            div(fomantic.ui.item).setAttributeRaw("data-tab", "$index")
+                                        }.apply {
+                                            text(pool.name)
+                                        }
+                                    }
+                                }
+                                tabHeaders.forEachIndexed { index, tabHeader ->
+                                    tabHeader.on.click {
+                                        tabHeaders.forEach { t ->
+                                            if (t == tabHeader) {
+                                                t.addClasses("active")
+                                            } else {
+                                                t.removeClasses("active")
+                                            }
+                                        }
+                                        tabBodies.forEachIndexed { tabIndex, tabBody ->
+                                            tabBody.apply {
+                                                if (index == tabIndex) {
+                                                    addClasses("active")
+                                                } else {
+                                                    removeClasses("active")
+
+                                                }
+                                            }
+                                        }
+
+                                    }
                                 }
                             }
                             execute("""window.scrollBy({left:0,top:window.innerHeight*0.8,behaviour:"smooth"})""")
